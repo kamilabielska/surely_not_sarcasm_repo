@@ -6,7 +6,7 @@
 |------------|----------|-------|
 |bag of words|◼◼◼  | |
 |RNN|◼◼◼  | |
-|CNN|◼◼◼  | |
+|CNN|◼◼◼  |◼     |
 |RNN + CNN|◼◼◼  | |
 |transfer learning|◼     | |
 
