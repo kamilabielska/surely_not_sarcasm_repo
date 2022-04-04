@@ -12,103 +12,158 @@ class WordEmbeddings():
     def __init__(self):
         pass
 
-    def get_glove_vocab(self, twitter=False, root=''):
-        filename = 'glove.6B.50d.txt' if not twitter else 'glove.twitter.27B.50d.txt'
+    def get_glove_vocab(self, emb_type='wikipedia', root=''):
+        min_vec_len = {
+            'wikipedia': 50,
+            'twitter': 25,
+            'crawl_uncased': 300,
+            'crawl_cased': 300
+        }
+
+        path_to_file = fr'glove/{emb_type}/{min_vec_len[emb_type]}d.txt'
         self.vocab = []
 
-        with open(root+filename, encoding='utf-8') as file:
+        with open(root+path_to_file, encoding='utf-8') as file:
             for line in file:
                 self.vocab.append(line.split()[0])
 
         return self.vocab
 
-    def get_glove_embeddings(self, input_dim, vec_len, tokenizer, twitter=False, root=''):
+    def get_glove_embeddings(self, input_dim, vec_len, tokenizer, emb_type='wikipedia', root='', init='zeros'):
         self.tokenizer = tokenizer
         self.input_dim = input_dim
 
-        vec_len = vec_len if not twitter else 50
-        if twitter and vec_len != 50:
-            print('for twitter vec_len = 50')
-        
-        filename = fr'glove.6B.{vec_len}d.txt' if not twitter else 'glove.twitter.27B.50d.txt'
-        self.embedding_matrix = np.zeros((input_dim, vec_len))
-        self.vocab = []
+        if init == 'zeros':
+            self.embedding_matrix = np.zeros((input_dim, vec_len))
+        elif init == 'uniform':
+            self.embedding_matrix = np.random.uniform(-0.05, 0.05, (input_dim, vec_len))
+            self.embedding_matrix[0, :] = 0
 
-        symbol_encoding = {
-            ':)': 'xxsmilingfacexx',
-            ':]': 'xxsmilingface2xx',
-            ':-)': 'xxsmilingface3xx',
-            ';)': 'xxwinksmilingfacexx',
-            ':(': 'xxsadfacexx',
-            ':-(': 'xxsadface2xx',
-            ';(': 'xxcryingsadfacexx',
-            ':|': 'xxblankfacexx',
-            ':o': 'xxsurprisedfacexx',
-            ':/': 'xxwryfacexx',
-            ':D': 'xxgrinfacexx',
-            ';D': 'xxwinkgrinfacexx',
-            ':P': 'xxtonguefacexx',
-            ':p': 'xxtongueface2xx',
-            ';p': 'xxtongueface3xx',
-            '...': 'xxthreedotsxx'
-        }
+        path_to_file = fr'glove/{emb_type}/{vec_len}d.txt'
 
-        with open(root+filename, encoding='utf-8') as file:
+        if emb_type != 'twitter':
+            symbol_encoding = {
+                ':)': 'xxsmilingfacexx',
+                ':]': 'xxsmilingface2xx',
+                ':-)': 'xxsmilingface3xx',
+                ';)': 'xxwinksmilingfacexx',
+                ':(': 'xxsadfacexx',
+                ':-(': 'xxsadface2xx',
+                ';(': 'xxcryingsadfacexx',
+                ':|': 'xxblankfacexx',
+                ':o': 'xxsurprisedfacexx',
+                ':/': 'xxwryfacexx',
+                ':D': 'xxgrinfacexx',
+                ';D': 'xxwinkgrinfacexx',
+                ':P': 'xxtonguefacexx',
+                ':p': 'xxtongueface2xx',
+                ';p': 'xxtongueface3xx',
+                '<3': 'xxheartxx',
+                '...': 'xxthreedotsxx'
+            }
+        else:
+            symbol_encoding = {
+                '<url>': 'xxurlxx',
+                '<user>': 'xxuserxx',
+                '<smile>': 'xxsmilexx',
+                '<lolface>': 'xxlolfacexx',
+                '<sadface>': 'xxsadfacexx',
+                '<neutralface>': 'xxneutralfacexx',
+                '<heart>': 'xxheartxx',
+                '<hashtag>': 'xxhashtagxx',
+                '<repeat>': 'xxrepeatxx',
+                '<elong>': 'xxelongxx',
+                '<allcaps>': 'xxallcapsxx',
+                '<number>': 'xxnumberxx'
+            }
+
+        self.words_covered = []
+
+        with open(root+path_to_file, encoding='utf-8') as file:
             for line in file:
                 word, *vector = line.split()
-                self.vocab.append(word)
                 word = word if word not in symbol_encoding else symbol_encoding[word]
+
                 if word in self.tokenizer.word_index:
-                    if self.tokenizer.word_index[word] < input_dim:
-                        self.embedding_matrix[self.tokenizer.word_index[word]] = np.array(vector, dtype=np.float32)
+                    word_id = self.tokenizer.word_index[word]
+                    if word_id < input_dim:
+                        self.embedding_matrix[word_id] = np.array(vector, dtype=np.float32)
+                        self.words_covered.append(word_id)
         
-        self.coverage = np.count_nonzero(np.count_nonzero(self.embedding_matrix, axis=1))/input_dim
-        print(fr'coverage: {self.coverage :.4f}')
+        print(fr'coverage: {len(self.words_covered)/input_dim :.4f}')
         
         return self.embedding_matrix
 
     def words_not_covered(self):
-        indices = np.where(np.count_nonzero(self.embedding_matrix, axis=1) == 0)[0]
-        indices = indices[indices != 0]
+        all_ids = np.arange(1, self.input_dim)
+        not_covered_ids = all_ids[~np.isin(all_ids, self.words_covered)]
         words = np.array(list(self.tokenizer.word_index.keys()))[:self.input_dim]
-        not_covered = tuple(zip(words[indices-1], indices))
+        not_covered = tuple(zip(words[not_covered_ids-1], not_covered_ids))
         return not_covered
 
 
-def preprocess_documents(docs, root='', twitter=False):
-    glove_vocab = WordEmbeddings().get_glove_vocab(root=root, twitter=twitter)
+def preprocess_documents(docs, root='', emb_type='wikipedia'):
+    glove_vocab = WordEmbeddings().get_glove_vocab(root=root, emb_type=emb_type)
     slang = pd.read_csv(root+'slang_no_duplicates_manual.csv')
+
+    tokenizer = Tokenizer()
+    tokenizer.fit_on_texts(docs)
     
-    slang = slang[~slang['acronym'].isin(glove_vocab)].reset_index(drop=True)
+    slang = slang[~slang['acronym'].isin(glove_vocab)]
+    slang = slang[slang['acronym'].isin(list(tokenizer.word_index.keys()))].reset_index(drop=True)
     slang_mapping = dict(list(slang.to_records(index=False)))
     slang_mapping = {re.compile(r'\b{}\b'.format(k)): v for k, v in slang_mapping.items()}
+
+    # re.compile(r'{}+(?!\S)'.format(re.escape(':)')))
     
-    X = (docs
-         .str.replace(r'http\S+', '', regex=True)
-         .str.replace(r'\bu/\S+', '', regex=True)
-         .str.replace(r'\:\)+(?!\S)', ' xxsmilingfacexx ', regex=True)
-         .str.replace(r'\:\]+(?!\S)', ' xxsmilingface2xx ', regex=True)
-         .str.replace(r'\:\-\)+(?!\S)', ' xxsmilingface3xx ', regex=True)
-         .str.replace(r'\;\)+(?!\S)', ' xxwinksmilingfacexx ', regex=True)
-         .str.replace(r'\:\(+(?!\S)', ' xxsadfacexx ', regex=True)
-         .str.replace(r'\:\-\(+(?!\S)', ' xxsadface2xx ', regex=True)
-         .str.replace(r'\;\(+(?!\S)', ' xxcryingsadfacexx ', regex=True)
-         .str.replace(r'\:\|+(?!\S)', ' xxblankfacexx ', regex=True)
-         .str.replace(r'\:o+(?!\S)', ' xxsurprisedfacexx ', regex=True)
-         .str.replace(r'\:\/+(?!\S)', ' xxwryfacexx ', regex=True)
-         .str.replace(r'\:D+(?!\S)', ' xxgrinfacexx ', regex=True)
-         .str.replace(r'\;D+(?!\S)', ' xxwinkgrinfacexx ', regex=True)
-         .str.replace(r'\:P+(?!\S)', ' xxtonguefacexx ', regex=True)
-         .str.replace(r'\:p+(?!\S)', ' xxtongueface2xx ', regex=True)
-         .str.replace(r'\;p+(?!\S)', ' xxtongueface3xx ', regex=True)
-         .str.replace(r'...', ' xxthreedotsxx ', regex=False)
-         .apply(lambda x: contractions.fix(x))
-         .str.lower()
-        )
-    
+    if emb_type != 'twitter':
+        X = (docs
+             .str.replace(r'http\S+', '', regex=True)
+             .str.replace(r'\bu/\S+', '', regex=True) # \w
+             .str.replace(r'\:\)+(?!\S)', ' xxsmilingfacexx ', regex=True)
+             .str.replace(r'\:\]+(?!\S)', ' xxsmilingface2xx ', regex=True)
+             .str.replace(r'\:\-\)+(?!\S)', ' xxsmilingface3xx ', regex=True)
+             .str.replace(r'\;\)+(?!\S)', ' xxwinksmilingfacexx ', regex=True)
+             .str.replace(r'\:\(+(?!\S)', ' xxsadfacexx ', regex=True)
+             .str.replace(r'\:\-\(+(?!\S)', ' xxsadface2xx ', regex=True)
+             .str.replace(r'\;\(+(?!\S)', ' xxcryingsadfacexx ', regex=True)
+             .str.replace(r'\:\|+(?!\S)', ' xxblankfacexx ', regex=True)
+             .str.replace(r'\:o+(?!\S)', ' xxsurprisedfacexx ', regex=True)
+             .str.replace(r'\:\/+(?!\S)', ' xxwryfacexx ', regex=True)
+             .str.replace(r'\:D+(?!\S)', ' xxgrinfacexx ', regex=True)
+             .str.replace(r'\;D+(?!\S)', ' xxwinkgrinfacexx ', regex=True)
+             .str.replace(r'\:P+(?!\S)', ' xxtonguefacexx ', regex=True)
+             .str.replace(r'\:p+(?!\S)', ' xxtongueface2xx ', regex=True)
+             .str.replace(r'\;p+(?!\S)', ' xxtongueface3xx ', regex=True)
+             .str.replace(r'\<3+(?!\S)', ' xxheartxx ', regex=True)
+             .str.replace(r'...', ' xxthreedotsxx ', regex=False)
+            )
+    else:
+        eyes = "[8:=;]"
+        nose = "['`\-]?"
+
+        X = (docs
+            .str.replace(r'https?:\/\/\S+\b|www\.(\w+\.)+\S*', 'xxurlxx', regex=True)
+            .str.replace(r'\bu/\w+', 'xxuserxx', regex=True)
+            .str.replace(fr'{eyes}{nose}[)d]+(?!\S)|[(]+{nose}{eyes}', ' xxsmilexx ', regex=True, case=False)
+            .str.replace(fr'{eyes}{nose}p+(?!\S)', ' xxlolfacexx ', regex=True, case=False)
+            .str.replace(fr'{eyes}{nose}\(+(?!\S)|\)+{nose}{eyes}', ' xxsadfacexx ', regex=True)
+            .str.replace(fr'{eyes}{nose}[\/|l*]', ' xxneutralfacexx ', regex=True)
+            .str.replace(r'\<3+(?!\S)', ' xxheartxx ', regex=True)
+            .str.replace(r'#\S+', 'xxhashtagxx ', regex=True)
+            .str.replace(r'([!?.]){2,}', r'\1 xxrepeatxx ', regex=True)
+            .str.replace(r'\b(\S*?)(.)\2{2,}\b', r'\1\2 xxelongxx ', regex=True)
+            .str.replace(r"(\b[^a-z0-9\W()<>'`\-]+\b)", r'\1 xxallcapsxx ', regex=True)
+            )
+
+    X = X.apply(lambda x: contractions.fix(x)).str.lower()
+
     for abbr, expan in slang_mapping.items():
         present = X.str.contains(abbr)
         X[present] = X[present].str.replace(abbr, expan, regex=True)
+
+    if emb_type == 'twitter':
+        X = X.str.replace(r'[-+]?[.\d]*[\d]+[:,.\d]*', ' <number> ', regex=True)
     
     include_in_vocab = list(string.punctuation)
 
@@ -120,8 +175,6 @@ def preprocess_documents(docs, root='', twitter=False):
     
     for symbol in include_in_vocab:
         X = X.str.replace(symbol, fr' {symbol} ', regex=False)
-
-    # X = X.str.replace(r'\d+', '', regex=True)
     
     return X
 

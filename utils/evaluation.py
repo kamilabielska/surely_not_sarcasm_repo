@@ -17,7 +17,7 @@ def plot_history(fit):
         ax.set_ylabel(which)
         ax.legend();
         
-def evaluate(model, X, y):
+def evaluate(model, X, y, palette='BuPu'):
     y_pred = model.predict(X).round().flatten()
     metrics = [
         fr'acc = {accuracy_score(y, y_pred) :.4f}',
@@ -29,7 +29,8 @@ def evaluate(model, X, y):
     fig, ax = plt.subplots(figsize=(5,5));
     confusion = confusion_matrix(y, y_pred, normalize='true')
     matrix_display = ConfusionMatrixDisplay(confusion, display_labels=['non-sarcastic', 'sarcastic'])
-    matrix_display.plot(colorbar=False, ax=ax)
+    matrix_display.plot(colorbar=False, ax=ax, cmap=plt.get_cmap(palette))
+    matrix_display.im_.set_clim(0, 1)
     plt.grid(False)
     plt.text(1.6, 0.65, '\n'.join(metrics), fontsize=15);
     
