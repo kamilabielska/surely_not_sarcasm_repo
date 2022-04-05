@@ -35,7 +35,7 @@ tasks:
     3. RNN
         - LSTM
         - GRU
-    4. attention?
+    4. attention
     5. transformers?
     6. embeddings?
 4. **experiments**
