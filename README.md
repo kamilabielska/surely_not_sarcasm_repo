@@ -29,7 +29,7 @@ tasks:
     - about sarcasm, sarcasm detection in nlp context
     - literature overview: what has been done a) with the use of machine learning and hand-crafted features, b) with the use of neural networks/deep learning, c) taking context into account
     - structure of the thesis
-3. **theory**
+2. **theory**
     1. neural network
     2. CNN
     3. RNN
@@ -38,9 +38,9 @@ tasks:
     4. attention
     5. transformers?
     6. embeddings?
-4. **experiments**
+3. **experiments**
     1. data description
     2. text preprocessing
     3. proposed architectures
     4. results + error analysis
-5. **conclusions**
+4. **conclusions**
