@@ -153,7 +153,7 @@ def preprocess_documents(docs, root='', emb_type='wikipedia'):
             .str.replace(r'#\S+', 'xxhashtagxx ', regex=True)
             .str.replace(r'([!?.]){2,}', r'\1 xxrepeatxx ', regex=True)
             .str.replace(r'\b(\S*?)(.)\2{2,}\b', r'\1\2 xxelongxx ', regex=True)
-            .str.replace(r"(\b[^a-z0-9\W()<>'`\-]+\b)", r'\1 xxallcapsxx ', regex=True)
+            .str.replace(r"(\b[^a-z0-9\W()<>'`\-]{2,}\b)", r'\1 xxallcapsxx ', regex=True)
             )
 
     X = X.apply(lambda x: contractions.fix(x)).str.lower()
@@ -163,7 +163,7 @@ def preprocess_documents(docs, root='', emb_type='wikipedia'):
         X[present] = X[present].str.replace(abbr, expan, regex=True)
 
     if emb_type == 'twitter':
-        X = X.str.replace(r'[-+]?[.\d]*[\d]+[:,.\d]*', ' <number> ', regex=True)
+        X = X.str.replace(r'[-+]?[.\d]*[\d]+[:,.\d]*', ' xxnumberxx ', regex=True)
     
     include_in_vocab = list(string.punctuation)
 
