@@ -15,6 +15,13 @@
 ◼◼◼ — good for now  
 ◼◼◼◼◼ — finished, final version
 
+
+tasks:
+- keep implementing architectures from papers
+- try different types of embeddings
+- and embeddings dimensions
+- play with hyperparameters
+
 ***
 
 ### plan
