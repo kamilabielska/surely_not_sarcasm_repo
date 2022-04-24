@@ -5,11 +5,11 @@
 |method|no context|context|
 |------------|----------|-------|
 |bag of words|◼◼◼  |◼ |
-|RNN|◼◼◼  |◼ |
+|RNN|◼◼◼  |◼◼ |
 |CNN|◼◼◼  |◼◼     |
-|RNN + CNN|◼◼◼  |◼ |
+|RNN + CNN|◼◼◼  |◼◼ |
 |attention|◼     | |
-|transfer learning|◼◼     | |
+|transfer learning|◼◼◼     | |
 
 ◼ — started  
 ◼◼◼ — good for now  
