@@ -4,7 +4,7 @@
 
 modele, które potencjalnie znajdą się w pracy, wszystkie zebrałam w pliku *all_the_models.ipynb*, oprócz bag-of-words w pliku *bag_of_words.ipynb* i DistilBERTa w pliku *transfer_learning.ipynb*, bo są trochę inne niż inne; poniższe nazwy odpowiadają sekcjom w notebooku, więc wystarczy wyszukać po nazwie
 
-w nawiasie podana dokładność dla tego jednego runa, tak żeby mieć szybki podgląd na sytuację
+w nawiasie podana dokładność dla tego jednego runa, tak żeby mieć szybki podgląd na sytuację (tyle, że DistilBERT na validacyjnym, nie testowym)
 
 **content-based (comment)**:
  - bag-of-words (0.6855): (właściwie bag-of-uni/bi/trigrams) baseline + univariate feature selection
