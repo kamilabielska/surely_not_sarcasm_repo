@@ -29,6 +29,21 @@ class WordEmbeddings():
 
         return self.vocab
 
+    def get_glove_vectors(self, tokens, vec_len, emb_type='wikipedia', root=''):
+
+        path_to_file = fr'glove/{emb_type}/{vec_len}d.txt'
+        vectors = {}
+
+        with open(root+path_to_file, encoding='utf-8') as file:
+            for line in file:
+                word, *vector = line.split()
+                if word in tokens:
+                    vectors[word] = np.array(vector, dtype=np.float32)
+                    if len(tokens) == len(vectors.keys()):
+                        break
+
+        return vectors
+
     def get_glove_embeddings(self, input_dim, vec_len, doc_vocab, emb_type='wikipedia', root='', init='zeros'):
         self.doc_vocab = doc_vocab
         self.input_dim = input_dim
@@ -85,7 +100,7 @@ def preprocess_documents(docs, root='', emb_type='wikipedia'):
             ':]': 'xxsmilingface2xx',
             ':-)': 'xxsmilingface3xx',
             ';)': 'xxwinksmilingfacexx',
-            ':(': 'xxsadfacexx',q
+            ':(': 'xxsadfacexx',
             ':-(': 'xxsadface2xx',
             ';(': 'xxcryingsadfacexx',
             ':|': 'xxblankfacexx',
@@ -136,9 +151,10 @@ def preprocess_documents(docs, root='', emb_type='wikipedia'):
             )
 
     X = (X
-        .apply(lambda x: contractions.fix(x))
-        .str.replace(r'\b(\S*?)(.)\2{2,}\b', r'\1\2 xxelongxx ', regex=True)
-        .str.replace(r"(\b[^a-z0-9\W()<>'`\-]{2,}\b)", r'\1 xxallcapsxx ', regex=True)
+        .apply(lambda x: contractions.fix(x, slang=False))
+        # .str.replace(r'\b(\S*?)(.)\2{2,}\b', r'\1\2 xxelongxx ', regex=True)
+        .str.replace(r'\b([a-zA-Z]+?)(.)\2{2,}\b', r'\1\2 xxelongxx ', regex=True)
+        .str.replace(r"(\b[^a-z0-9\W()<>'`\-_]{2,}\b)", r'\1 xxallcapsxx ', regex=True)
         .str.lower()
         )
 
@@ -147,17 +163,24 @@ def preprocess_documents(docs, root='', emb_type='wikipedia'):
 
     if emb_type == 'twitter':
         X = X.str.replace(r'[-+]?[.\d]*[\d]+[:,.\d]*', ' xxnumberxx ', regex=True)
+    else:
+        has_numbers = X.str.contains(r'\d+', regex=True)
+        X[has_numbers] = X[has_numbers].str.replace(r'[-+]?[.,\d]*[\d]+[:,.]+[\d]+', ' xxnumberxx ', regex=True)
+        # very slow regex
     
     include_in_vocab = list(string.punctuation)
 
     include_in_vocab.remove('-')
     include_in_vocab.remove("'")
-
-    include_in_vocab.append("'s")
-    include_in_vocab.append("'ll")
     
     for symbol in include_in_vocab:
         X = X.str.replace(symbol, fr' {symbol} ', regex=False)
+
+    X = X.str.replace(r"([a-zA-Z]+)'s", r"\1 's ", regex=True)
+    X = X.str.replace(r"([a-zA-Z]+)'ll", r"\1 'll ", regex=True)
+    X = X.str.replace(r"([a-zA-Z]+)'d", r"\1 'd ", regex=True)
+
+    X = X.str.replace("'", " ' ", regex=False)
 
     for token, encoding in token_encoding.items():
         X = X.str.replace(encoding, token, regex=False)
