@@ -6,6 +6,9 @@ modele, które potencjalnie znajdą się w pracy, wszystkie zebrałam w pliku *a
 
 w nawiasie podana dokładność dla tego jednego runa, tak żeby mieć szybki podgląd na sytuację (tyle, że DistilBERT na validacyjnym, nie testowym)
 
+\* w bag-of-words ostatnio coś zmieniałam i nie przystosowałam regularyzacji, w rzeczywistości będzie mniejsza
+\*\* ostateczna ewaluacja będzie dla train-val-test splitu 70-15-15
+
 **content-based (comment)**:
  - bag-of-words (0.6855): (właściwie bag-of-uni/bi/trigrams) baseline + univariate feature selection
  - GRU (0.7464): najprostsze z najprostszych, jedna warstwa GRU i tyle
