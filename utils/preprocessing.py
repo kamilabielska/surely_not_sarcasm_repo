@@ -5,7 +5,6 @@ import string
 import re
 
 from keras.preprocessing.text import Tokenizer
-from keras.preprocessing.sequence import pad_sequences
 
 
 class WordEmbeddings():
@@ -44,15 +43,11 @@ class WordEmbeddings():
 
         return vectors
 
-    def get_glove_embeddings(self, input_dim, vec_len, doc_vocab, emb_type='wikipedia', root='', init='zeros'):
+    def get_glove_embeddings(self, input_dim, vec_len, doc_vocab, emb_type='wikipedia', root=''):
         self.doc_vocab = doc_vocab
         self.input_dim = input_dim
 
-        if init == 'zeros':
-            self.embedding_matrix = np.zeros((input_dim, vec_len))
-        elif init == 'uniform':
-            self.embedding_matrix = np.random.uniform(-0.05, 0.05, (input_dim, vec_len))
-            self.embedding_matrix[0, :] = 0
+        self.embedding_matrix = np.zeros((input_dim, vec_len))
 
         path_to_file = fr'glove/{emb_type}/{vec_len}d.txt'
         self.words_covered = []
@@ -152,7 +147,6 @@ def preprocess_documents(docs, root='', emb_type='wikipedia'):
 
     X = (X
         .apply(lambda x: contractions.fix(x, slang=False))
-        # .str.replace(r'\b(\S*?)(.)\2{2,}\b', r'\1\2 xxelongxx ', regex=True)
         .str.replace(r'\b([a-zA-Z]+?)(.)\2{2,}\b', r'\1\2 xxelongxx ', regex=True)
         .str.replace(r"(\b[^a-z0-9\W()<>'`\-_]{2,}\b)", r'\1 xxallcapsxx ', regex=True)
         .str.lower()
@@ -166,7 +160,6 @@ def preprocess_documents(docs, root='', emb_type='wikipedia'):
     else:
         has_numbers = X.str.contains(r'\d+', regex=True)
         X[has_numbers] = X[has_numbers].str.replace(r'[-+]?[.,\d]*[\d]+[:,.]+[\d]+', ' xxnumberxx ', regex=True)
-        # very slow regex
     
     include_in_vocab = list(string.punctuation)
 
@@ -186,26 +179,3 @@ def preprocess_documents(docs, root='', emb_type='wikipedia'):
         X = X.str.replace(encoding, token, regex=False)
     
     return X
-
-# the old way of tokenizing
-def tokenize(data, input_dim=10000, filters='', quantile=0.9, verbose=False, **kwargs):
-    tokenized_data = {}
-    tokenizers = {}
-
-    for which in ['comment', 'parent']:
-        suffix = '' if which == 'comment' else '_par'
-
-        tokenizer = Tokenizer(num_words=input_dim, filters=filters, **kwargs)
-        tokenizer.fit_on_texts(data['X_train'+suffix])
-
-        for x in ['X_train', 'X_val', 'X_test']:
-            seq = tokenizer.texts_to_sequences(data[x+suffix])
-            if x == 'X_train':
-                maxlen = int(np.quantile([len(i) for i in seq], quantile))
-                if verbose:
-                    print(fr'{x+suffix}: maxlen = {maxlen}')
-            tokenized_data[x+suffix] = pad_sequences(seq, padding='post', maxlen=maxlen)
-
-        tokenizers[which] = tokenizer
-
-    return tokenizers, tokenized_data
